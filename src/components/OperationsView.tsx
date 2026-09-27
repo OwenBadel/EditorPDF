@@ -12,6 +12,7 @@ import {
   RotateCw,
   Stamp,
   FileCode,
+  Binary,
 } from 'lucide-react';
 
 interface OperationsViewProps {
@@ -21,6 +22,9 @@ interface OperationsViewProps {
   onOpenToImage: () => void;
   onOpenOcr: () => void;
   onOpenConvertToPdf: () => void;
+  onOpenWatermark: () => void;
+  onOpenRotate: () => void;
+  onOpenPageNumber: () => void;
 }
 
 export const OperationsView: React.FC<OperationsViewProps> = ({
@@ -30,6 +34,9 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
   onOpenToImage,
   onOpenOcr,
   onOpenConvertToPdf,
+  onOpenWatermark,
+  onOpenRotate,
+  onOpenPageNumber,
 }) => {
   const operations = [
     {
@@ -107,6 +114,44 @@ export const OperationsView: React.FC<OperationsViewProps> = ({
       accentColor: 'text-emerald-700',
       bgIcon: 'bg-emerald-100 dark:bg-emerald-950/40',
       btnColor: 'bg-emerald-700 hover:bg-emerald-800 text-white',
+    },
+    {
+      id: 'rotate',
+      title: 'Rotar Páginas de PDF',
+      description:
+        'Gira páginas seleccionadas o todo el documento en 90°, 180° o 270° de forma permanente y descarga al instante.',
+      icon: RotateCw,
+      action: onOpenRotate,
+      btnText: 'Rotar documento',
+      accentColor: 'text-[#0060a8]',
+      bgIcon: 'bg-[#0060a8]/10',
+      btnColor: 'bg-[#0060a8] hover:bg-[#004e8a] text-white',
+    },
+    {
+      id: 'watermark',
+      title: 'Marca de Agua de Seguridad',
+      description:
+        'Estampa textos diagonales como CONFIDENCIAL o BORRADOR con opacidad y colores regulables en todo el PDF.',
+      icon: Stamp,
+      action: onOpenWatermark,
+      btnText: 'Estampar marca',
+      badge: 'Seguridad',
+      accentColor: 'text-[#b7131a]',
+      bgIcon: 'bg-[#b7131a]/10',
+      btnColor: 'bg-[#b7131a] hover:bg-[#db322f] text-white',
+    },
+    {
+      id: 'paginate',
+      title: 'Numerar Páginas Automático',
+      description:
+        'Inserta numeración correlativa en formato detallado ("Página X de Y") o simple en cualquier posición de la hoja.',
+      icon: Binary,
+      action: onOpenPageNumber,
+      btnText: 'Insertar números',
+      badge: 'Organización',
+      accentColor: 'text-purple-700 dark:text-purple-400',
+      bgIcon: 'bg-purple-100 dark:bg-purple-950/40',
+      btnColor: 'bg-purple-700 hover:bg-purple-800 text-white',
     },
     {
       id: 'swagger-docs',

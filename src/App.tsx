@@ -16,6 +16,9 @@ import { CompressModal } from './components/modals/CompressModal';
 import { ToImageModal } from './components/modals/ToImageModal';
 import { OcrModal } from './components/modals/OcrModal';
 import { ConvertToPdfModal } from './components/modals/ConvertToPdfModal';
+import { WatermarkModal } from './components/modals/WatermarkModal';
+import { RotateModal } from './components/modals/RotateModal';
+import { PageNumberModal } from './components/modals/PageNumberModal';
 import { SignatureImageModal } from './components/SignatureImageModal';
 
 import {
@@ -104,6 +107,9 @@ export default function App() {
   const [isToImageOpen, setIsToImageOpen] = useState(false);
   const [isOcrOpen, setIsOcrOpen] = useState(false);
   const [isConvertToPdfOpen, setIsConvertToPdfOpen] = useState(false);
+  const [isWatermarkOpen, setIsWatermarkOpen] = useState(false);
+  const [isRotateOpen, setIsRotateOpen] = useState(false);
+  const [isPageNumberOpen, setIsPageNumberOpen] = useState(false);
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
 
   const saveHistory = () => {
@@ -449,6 +455,9 @@ export default function App() {
             onOpenToImage={() => setIsToImageOpen(true)}
             onOpenOcr={() => setIsOcrOpen(true)}
             onOpenConvertToPdf={() => setIsConvertToPdfOpen(true)}
+            onOpenWatermark={() => setIsWatermarkOpen(true)}
+            onOpenRotate={() => setIsRotateOpen(true)}
+            onOpenPageNumber={() => setIsPageNumberOpen(true)}
           />
         )}
       </div>
@@ -503,6 +512,54 @@ export default function App() {
       />
 
       <OcrModal isOpen={isOcrOpen} onClose={() => setIsOcrOpen(false)} />
+
+      <WatermarkModal
+        isOpen={isWatermarkOpen}
+        onClose={() => setIsWatermarkOpen(false)}
+        onDocumentProcessed={(pdfBytes, fileName) => {
+          const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+          handleDocumentLoaded({
+            name: fileName,
+            size: pdfBytes.byteLength,
+            totalPages: totalPages,
+            fileBytes: pdfBytes,
+            fileBlob: blob,
+          });
+          setIsWatermarkOpen(false);
+        }}
+      />
+
+      <RotateModal
+        isOpen={isRotateOpen}
+        onClose={() => setIsRotateOpen(false)}
+        onDocumentProcessed={(pdfBytes, fileName) => {
+          const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+          handleDocumentLoaded({
+            name: fileName,
+            size: pdfBytes.byteLength,
+            totalPages: totalPages,
+            fileBytes: pdfBytes,
+            fileBlob: blob,
+          });
+          setIsRotateOpen(false);
+        }}
+      />
+
+      <PageNumberModal
+        isOpen={isPageNumberOpen}
+        onClose={() => setIsPageNumberOpen(false)}
+        onDocumentProcessed={(pdfBytes, fileName) => {
+          const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+          handleDocumentLoaded({
+            name: fileName,
+            size: pdfBytes.byteLength,
+            totalPages: totalPages,
+            fileBytes: pdfBytes,
+            fileBlob: blob,
+          });
+          setIsPageNumberOpen(false);
+        }}
+      />
 
       {/* Signature & Image Insertion Modal */}
       <SignatureImageModal
