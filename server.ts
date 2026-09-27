@@ -455,6 +455,54 @@ app.get("/api/openapi.json", (_req, res) => {
             }
           }
         }
+      },
+      "/pdf/paginate": {
+        post: {
+          summary: "Insertar numeración de páginas en un PDF",
+          description: "Estampa números de página (ej. 'Página 1 de 5' o '1 / 5') en posiciones configurables.",
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    file: { type: "string", format: "binary", description: "Archivo PDF" },
+                    format: { type: "string", enum: ["detailed", "simple", "numbers"], default: "detailed" },
+                    position: { type: "string", enum: ["bottom-center", "bottom-right", "top-right"], default: "bottom-center" },
+                    start_number: { type: "integer", default: 1 }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "PDF con numeración agregada", content: { "application/pdf": {} } }
+          }
+        }
+      },
+      "/pdf/organize": {
+        post: {
+          summary: "Reorganizar, duplicar o eliminar páginas de un PDF",
+          description: "Reconstruye el PDF según el orden explícito de páginas especificado (ej. '3, 1, 2' o '[1, 2, 4]').",
+          requestBody: {
+            required: true,
+            content: {
+              "multipart/form-data": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    file: { type: "string", format: "binary", description: "Archivo PDF fuente" },
+                    page_order: { type: "string", example: "1, 3, 2", description: "Orden o lista de páginas deseadas separadas por coma" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "PDF reorganizado resultante", content: { "application/pdf": {} } }
+          }
+        }
       }
     },
   });
@@ -1119,6 +1167,148 @@ app.post(
       console.error("Error inspecting PDF:", err);
       res.status(500).json({
         error: "Fallo al inspeccionar los metadatos del documento PDF.",
+        details: err.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// ENDPOINT 10: POST /api/pdf/paginate
+// ==========================================
+app.post(
+  "/api/pdf/paginate",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({
+        error: "No se proporcionó ningún archivo PDF.",
+        code: "FILE_REQUIRED",
+      });
+    }
+    registerCleanup(res, [file.path]);
+
+    try {
+      const format = req.body.format || "detailed"; // 'detailed', 'simple', 'numbers'
+      const position = req.body.position || "bottom-center"; // 'bottom-center', 'bottom-right', 'top-right'
+      const startNumber = parseInt(req.body.start_number || "1", 10);
+      const fontSize = parseInt(req.body.font_size || "10", 10);
+
+      const fileBytes = fs.readFileSync(file.path);
+      const pdf = await PDFDocument.load(fileBytes, { ignoreEncryption: true });
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
+      const pages = pdf.getPages();
+      const totalPages = pages.length;
+
+      for (let i = 0; i < totalPages; i++) {
+        const page = pages[i];
+        const pageNum = startNumber + i;
+        const { width, height } = page.getSize();
+
+        let label = `Página ${pageNum} de ${totalPages}`;
+        if (format === "simple") {
+          label = `${pageNum} / ${totalPages}`;
+        } else if (format === "numbers") {
+          label = `${pageNum}`;
+        }
+
+        const textWidth = font.widthOfTextAtSize(label, fontSize);
+        let x = (width - textWidth) / 2;
+        if (position === "bottom-right") {
+          x = width - textWidth - 36;
+        } else if (position === "top-right") {
+          x = width - textWidth - 36;
+        }
+
+        const y = position.startsWith("top") ? height - 30 : 25;
+
+        page.drawText(label, {
+          x,
+          y,
+          size: fontSize,
+          font,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+      }
+
+      const paginatedBytes = await pdf.save({ useObjectStreams: true });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="documento_paginado.pdf"'
+      );
+      res.setHeader("Content-Length", paginatedBytes.length);
+      res.send(Buffer.from(paginatedBytes));
+    } catch (err: any) {
+      console.error("Error paginating PDF:", err);
+      res.status(500).json({
+        error: "Fallo al insertar numeración de páginas en el PDF.",
+        details: err.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// ENDPOINT 11: POST /api/pdf/organize
+// ==========================================
+app.post(
+  "/api/pdf/organize",
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({
+        error: "No se proporcionó ningún archivo PDF.",
+        code: "FILE_REQUIRED",
+      });
+    }
+    registerCleanup(res, [file.path]);
+
+    try {
+      const pageOrderStr = req.body.page_order || "";
+      if (!pageOrderStr.trim()) {
+        return res.status(400).json({
+          error: "Debe proporcionar una secuencia de páginas (ej. '1, 3, 2').",
+          code: "PAGE_ORDER_REQUIRED",
+        });
+      }
+
+      const fileBytes = fs.readFileSync(file.path);
+      const pdf = await PDFDocument.load(fileBytes, { ignoreEncryption: true });
+      const maxPages = pdf.getPageCount();
+
+      const rawPages = pageOrderStr
+        .replace(/[\[\]]/g, "")
+        .split(",")
+        .map((p: string) => parseInt(p.trim(), 10))
+        .filter((n: number) => !isNaN(n) && n >= 1 && n <= maxPages);
+
+      if (rawPages.length === 0) {
+        return res.status(400).json({
+          error: `Las páginas indicadas no son válidas para este documento (páginas disponibles: 1 a ${maxPages}).`,
+          code: "INVALID_PAGE_NUMBERS",
+        });
+      }
+
+      const newPdf = await PDFDocument.create();
+      const zeroBasedIndices = rawPages.map((p: number) => p - 1);
+      const copiedPages = await newPdf.copyPages(pdf, zeroBasedIndices);
+      copiedPages.forEach((p) => newPdf.addPage(p));
+
+      const organizedBytes = await newPdf.save({ useObjectStreams: true });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        'attachment; filename="documento_organizado.pdf"'
+      );
+      res.setHeader("Content-Length", organizedBytes.length);
+      res.send(Buffer.from(organizedBytes));
+    } catch (err: any) {
+      console.error("Error organizing PDF:", err);
+      res.status(500).json({
+        error: "Fallo al reorganizar páginas del documento PDF.",
         details: err.message,
       });
     }
