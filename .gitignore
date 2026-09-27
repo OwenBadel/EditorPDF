@@ -26,3 +26,7 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Directivas agenticas y tooling local privado
+AGENTS.md
+.agents/
