@@ -1,0 +1,6 @@
+{
+  "name": "PDF Professional - Editor de PDF",
+  "description": "Editor completo de PDF con herramientas para unir, dividir, comprimir, convertir imágenes/Word a PDF, extraer texto (OCR) y exportar páginas como imágenes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
